@@ -253,7 +253,7 @@
   .seg { display: flex; gap: 6px; }
   .opt { flex: 1; min-height: 46px; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; font-weight: 600; padding: 4px; }
   .opt[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-  input[type="date"] { width: 100%; min-height: 46px; padding: 8px 12px; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+  input[type="date"], input[type="password"] { width: 100%; min-height: 46px; padding: 8px 12px; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
   .danger { min-height: 46px; border: 1px solid var(--rest); color: var(--rest); background: transparent; border-radius: 8px; font-weight: 600; }
 
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -335,6 +335,12 @@
       <h3 id="gLabel">Geluid</h3>
       <div class="seg" id="sSound" role="group" aria-labelledby="gLabel"></div>
       <p>Tonen: pieptoon bij start, aftellen van 3 naar 1, einde en afronding, plus trillen. Tonen + stem: je telefoon leest ook de oefening voor. Tik op een optie om het te horen.</p>
+    </div>
+    <div class="grp">
+      <label for="sToken"><b>Synchronisatie</b></label>
+      <input type="password" id="sToken" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Token van je server">
+      <p id="sSync"></p>
+      <button class="opt" id="sSyncNow" type="button">Nu synchroniseren</button>
     </div>
     <div class="grp">
       <button class="danger" id="sReset" type="button">Voortgang wissen</button>
@@ -421,7 +427,7 @@
   var ICON = { play: ic("play"), pause: ic("pause") };
   Array.prototype.forEach.call(document.querySelectorAll("[data-ic]"), function (n) { n.innerHTML = ic(n.getAttribute("data-ic")); });
 
-  var state = { days: [3, 5, 0], start: "2026-10-19", rest: 10, sound: "beep", done: {}, sel: null, selDate: null };
+  var state = { days: [3, 5, 0], start: "2026-10-19", rest: 10, sound: "beep", done: {}, sel: null, selDate: null, ts: 0 };
 
   function pad(n) { return n < 10 ? "0" + n : String(n); }
   function iso(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
@@ -446,9 +452,64 @@
       else if (typeof saved.sound === "boolean") state.sound = saved.sound ? "beep" : "off";
       if (saved.done && typeof saved.done === "object") state.done = saved.done;
       if (typeof saved.sel === "string") { state.sel = saved.sel; state.selDate = saved.selDate; }
+      if (typeof saved.ts === "number") state.ts = saved.ts;
     }
   } catch (e) {}
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  /* Opslaan: altijd lokaal (localStorage); met een token ook op de server (SQLite). Nieuwste wijziging wint. */
+  var TKEY = "enkeltraining-token", TOKEN = "", pushT = null, sync = { s: "off", at: null };
+  try { TOKEN = localStorage.getItem(TKEY) || ""; } catch (e) {}
+  sync.s = TOKEN ? "idle" : "off";
+  function part() { return { days: state.days, start: state.start, rest: state.rest, sound: state.sound, done: state.done }; }
+  var lastJ = JSON.stringify(part());
+  function persist() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  function save() {
+    var j = JSON.stringify(part());
+    if (j !== lastJ) { lastJ = j; state.ts = Date.now(); schedulePush(); }
+    persist();
+  }
+  function syncText() {
+    if (sync.s === "off") return "Geen token ingesteld: je data staat alleen op dit apparaat.";
+    if (sync.s === "auth") return "Token klopt niet.";
+    if (sync.s === "offline") return "Geen verbinding met de server. Wijzigingen worden later verstuurd.";
+    if (sync.s === "ok") return "Gesynchroniseerd om " + pad(sync.at.getHours()) + ":" + pad(sync.at.getMinutes()) + ".";
+    return "Verbinden...";
+  }
+  function setSync(st) { sync.s = st; if (st === "ok") sync.at = new Date(); var p = $("sSync"); if (p) p.textContent = syncText(); }
+  function api(method, p, body) {
+    return fetch(p, { method: method, headers: { "Authorization": "Bearer " + TOKEN, "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  }
+  function schedulePush() { if (!TOKEN) return; clearTimeout(pushT); pushT = setTimeout(push, 600); }
+  function push() {
+    if (!TOKEN) return Promise.resolve();
+    return api("PUT", "api/state", { state: part(), updatedAt: state.ts || Date.now() }).then(function (r) {
+      if (r.status === 401) { setSync("auth"); return; }
+      if (!r.ok) throw new Error("push");
+      return r.json().then(function (d) { if (d.accepted === false) adopt(d); else setSync("ok"); });
+    }).catch(function () { setSync("offline"); });
+  }
+  function adopt(d) {
+    var s = d.state;
+    if (!s) return;
+    state.days = s.days; state.start = s.start; state.rest = s.rest; state.sound = s.sound; state.done = s.done; state.ts = d.updatedAt; state.sel = null;
+    lastJ = JSON.stringify(part()); persist(); setSync("ok");
+    if ($("player").hidden) { renderHome(); if (!$("settings").hidden) renderSettings(); }
+  }
+  function pull() {
+    if (!TOKEN) return Promise.resolve();
+    return api("GET", "api/state").then(function (r) {
+      if (r.status === 401) { setSync("auth"); return; }
+      if (!r.ok) throw new Error("pull");
+      return r.json().then(function (d) {
+        if (d.state && d.updatedAt > (state.ts || 0)) adopt(d);
+        else if (!d.state || (state.ts || 0) > d.updatedAt) { if (!state.ts) state.ts = Date.now(); persist(); return push(); }
+        else setSync("ok");
+      });
+    }).catch(function () { setSync("offline"); });
+  }
+  function logDone(sess, minutes) {
+    if (!TOKEN) return;
+    api("POST", "api/log", { session: sess.id, week: sess.week, idx: sess.idx, minutes: minutes, finishedAt: Date.now() }).catch(function () {});
+  }
 
   /* Schema en keuze van de training van vandaag */
   function schedule() {
@@ -734,6 +795,7 @@
     P.phase = "done"; P.running = false;
     state.done[P.sess.id] = true; state.sel = null; save();
     var mins = Math.max(1, Math.round(P.elapsed / 60000));
+    logDone(P.sess, mins);
     $("pDoneText").textContent = "Training " + (P.sess.idx + 1) + " van week " + (P.sess.week + 1) + " is afgevinkt. Je was ± " + mins + " min bezig.";
     $("pDone").hidden = false;
     unlock(); sound("done"); speak("Klaar. Goed gedaan.");
@@ -815,6 +877,8 @@
       });
     });
     $("sStart").value = state.start;
+    $("sToken").value = TOKEN;
+    $("sSync").textContent = syncText();
     $("sReset").textContent = "Voortgang wissen";
     armed = null;
   }
@@ -826,6 +890,12 @@
     if (/^\d{4}-\d{2}-\d{2}$/.test(v) && parseISO(v)) { state.start = v; state.sel = null; save(); }
     else $("sStart").value = state.start;
   });
+  $("sToken").addEventListener("change", function () {
+    TOKEN = $("sToken").value.trim();
+    try { if (TOKEN) localStorage.setItem(TKEY, TOKEN); else localStorage.removeItem(TKEY); } catch (e) {}
+    setSync(TOKEN ? "idle" : "off"); pull();
+  });
+  $("sSyncNow").addEventListener("click", function () { setSync(TOKEN ? "idle" : "off"); pull(); });
   $("sReset").addEventListener("click", function () {
     if (!armed) {
       armed = setTimeout(function () { armed = null; $("sReset").textContent = "Voortgang wissen"; }, 4000);
@@ -838,7 +908,10 @@
   });
 
   document.addEventListener("visibilitychange", function () { if (!document.hidden && pl.hidden && $("settings").hidden) renderHome(); });
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) pull(); });
+  window.addEventListener("online", pull);
   renderHome();
+  pull();
   if ("serviceWorker" in navigator) window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 </script>
 </body>

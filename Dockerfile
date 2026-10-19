@@ -1,4 +1,8 @@
-FROM nginx:alpine
-COPY index.html manifest.webmanifest sw.js /usr/share/nginx/html/
-COPY icons /usr/share/nginx/html/icons
-COPY img /usr/share/nginx/html/img
+FROM node:24-alpine
+WORKDIR /app
+COPY server.js ./
+COPY public ./public
+ENV PORT=3000 DATA_DIR=/data NODE_NO_WARNINGS=1
+VOLUME /data
+EXPOSE 3000
+CMD ["node", "server.js"]

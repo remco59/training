@@ -1,0 +1,11 @@
+services:
+  enkeltraining:
+    build: .
+    container_name: enkeltraining
+    restart: unless-stopped
+    ports:
+      - "8089:3000"
+    environment:
+      TOKEN: "vervang-dit-door-een-lang-geheim"   # minimaal 12 tekens
+    volumes:
+      - /mnt/user/appdata/enkeltraining:/data
