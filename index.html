@@ -1,0 +1,845 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Enkeltraining</title>
+<meta name="theme-color" content="#1b66a8">
+<meta name="color-scheme" content="light dark">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Enkel">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+  /* Layout: telefoon-app. Startscherm met de training van vandaag en het schema, een speler op volledig scherm met timer en figuur per oefening, en een instellingenscherm. */
+  :root {
+    --bg: #f1f5f8;
+    --surface: #ffffff;
+    --ink: #11202b;
+    --muted: #55687a;
+    --line: #d3dde5;
+    --accent: #1b66a8;
+    --on-accent: #ffffff;
+    --accent-soft: #e0edf8;
+    --rest: #a4560c;
+    --on-rest: #ffffff;
+    --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+    --font-body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1820;
+      --surface: #15242f;
+      --ink: #e5eef5;
+      --muted: #97aebf;
+      --line: #263b49;
+      --accent: #62adea;
+      --on-accent: #08141c;
+      --accent-soft: #1b3447;
+      --rest: #f2a65a;
+      --on-rest: #1a1006;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1820;
+    --surface: #15242f;
+    --ink: #e5eef5;
+    --muted: #97aebf;
+    --line: #263b49;
+    --accent: #62adea;
+    --on-accent: #08141c;
+    --accent-soft: #1b3447;
+    --rest: #f2a65a;
+    --on-rest: #1a1006;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.5;
+    padding-block: 24px 40px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 640px; margin: 0 auto; display: grid; gap: 24px; }
+
+  .eyebrow {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  h1 {
+    margin: 2px 0 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(44px, 12vw, 64px);
+    line-height: 0.95;
+    text-wrap: balance;
+  }
+  .icon-btn {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    display: grid;
+    place-items: center;
+  }
+  .i { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .icon-btn svg { width: 22px; height: 22px; color: var(--ink); }
+
+  .label {
+    margin: 0 0 10px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Training van vandaag */
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 14px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 99px;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .pill.soft { background: var(--accent-soft); color: var(--accent); }
+  .card h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 34px; line-height: 1; }
+  .focus { margin: 0; color: var(--muted); }
+  .lst { list-style: none; margin: 0; padding: 0; }
+  .lst li {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr) auto;
+    column-gap: 10px;
+    align-items: baseline;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+  }
+  .lst .n { font-family: var(--font-display); font-weight: 700; font-size: 22px; color: var(--accent); line-height: 1; }
+  .lst .t { font-weight: 600; line-height: 1.25; }
+  .lst .s { display: block; color: var(--muted); font-size: 14px; font-weight: 400; }
+  .lst .a { font-family: var(--font-display); font-weight: 700; font-size: 22px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .meta { margin: 0; color: var(--muted); font-size: 14px; }
+  .go {
+    width: 100%;
+    min-height: 58px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 26px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Schema */
+  .wk { display: grid; gap: 8px; margin-bottom: 14px; }
+  .wk h3 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 20px; }
+  .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+  .chip {
+    display: grid;
+    gap: 0;
+    text-align: left;
+    padding: 8px 10px;
+    min-height: 54px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .chip b { font-weight: 600; line-height: 1.25; }
+  .chip small { font-size: 13px; color: var(--muted); }
+  .chip.done small { color: var(--accent); font-weight: 600; }
+  .chip.missed small { color: var(--rest); font-weight: 600; }
+  .chip.today small { color: var(--accent); font-weight: 600; }
+  .chip[aria-pressed="true"] { border: 2px solid var(--accent); background: var(--accent-soft); padding: 7px 9px; }
+
+  /* Overlays */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: var(--bg);
+    color: var(--ink);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .overlay[hidden], .cover[hidden], .extra [hidden] { display: none !important; }
+  .pwrap { position: relative; width: 100%; max-width: 520px; margin: 0 auto; flex: 1; display: flex; flex-direction: column; gap: 12px; padding-block: 12px; }
+  .ptop { display: flex; align-items: center; gap: 12px; }
+  .pmeta { font-family: var(--font-display); font-weight: 600; font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .segs { display: flex; gap: 6px; }
+  .segs span { flex: 1; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .segs i { display: block; height: 100%; width: 0; background: var(--accent); }
+  .pbody { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; min-height: 0; }
+  .illwrap { width: 100%; height: clamp(150px, 30vh, 260px); background: var(--accent-soft); border-radius: 12px; padding: 6px; }
+  .illus { width: 100%; height: 100%; fill: none; stroke: var(--ink); stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; }
+  .illus .gr { stroke: var(--muted); stroke-width: 4; opacity: 0.55; }
+  .illus .hl { stroke: var(--accent); stroke-width: 4; }
+  .illus .hlf { fill: var(--accent); stroke: none; }
+  .illus .ghost { opacity: 0.4; }
+  .illus .dash { stroke-dasharray: 5 6; }
+  .illus .sole { fill: var(--surface); }
+  .illus .cap { fill: var(--muted); stroke: none; font-family: var(--font-body); font-weight: 600; font-size: 12px; }
+  .illus .hlt { fill: var(--accent); stroke: none; font-family: var(--font-display); font-weight: 700; font-size: 20px; }
+  .pbody h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(28px, 8vw, 38px); line-height: 1; text-wrap: balance; }
+  .badge { margin: 0; font-weight: 600; color: var(--accent); }
+  [data-phase="rest"] .badge { color: var(--rest); }
+  .ringbox { position: relative; width: min(46vw, 190px); aspect-ratio: 1; }
+  .ring { width: 100%; height: 100%; }
+  .rt { fill: none; stroke: var(--line); stroke-width: 9; }
+  .rp { fill: none; stroke: var(--accent); stroke-width: 9; stroke-linecap: round; stroke-dasharray: 339.292; stroke-dashoffset: 0; transition: stroke-dashoffset 0.25s linear; }
+  [data-phase="rest"] .rp { stroke: var(--rest); }
+  .ringtxt { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; }
+  #pTime { font-family: var(--font-display); font-weight: 700; font-size: clamp(52px, 16vw, 72px); line-height: 0.9; font-variant-numeric: tabular-nums; }
+  #pUnit { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .pnote { margin: 0; color: var(--muted); max-width: 40ch; font-size: 15px; }
+  .pctl { display: flex; align-items: center; justify-content: center; gap: 20px; padding-block: 6px; }
+  .ctl { width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; }
+  .ctl svg { width: 26px; height: 26px; color: var(--ink); }
+  .ctl.big { width: 84px; height: 84px; background: var(--accent); border-color: var(--accent); }
+  .ctl.big svg { width: 36px; height: 36px; color: var(--on-accent); fill: currentColor; }
+  [data-phase="rest"] .ctl.big { background: var(--rest); border-color: var(--rest); }
+  [data-phase="rest"] .ctl.big svg { color: var(--on-rest); }
+  .hint { margin: 0; text-align: center; color: var(--muted); font-size: 14px; min-height: 1.4em; }
+  .extra { display: flex; justify-content: center; min-height: 44px; }
+  .txtbtn { min-height: 44px; border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 8px 18px; font-weight: 600; }
+  .txtbtn.main { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .cover { position: absolute; inset: 0; z-index: 2; background: var(--bg); display: grid; place-content: center; justify-items: center; gap: 14px; text-align: center; padding: 16px; }
+  .cover h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 40px; line-height: 1; }
+  .cover p { margin: 0; color: var(--muted); max-width: 34ch; }
+  .cover .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .tick { width: 84px; height: 84px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; }
+  .tick svg { width: 44px; height: 44px; color: var(--on-accent); stroke-width: 3; }
+
+  /* Instellingen */
+  .sw { width: 100%; max-width: 520px; margin: 0 auto; display: grid; gap: 22px; padding-block: 12px 32px; }
+  .sw h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 34px; line-height: 1; }
+  .grp { display: grid; gap: 8px; }
+  .grp h3 { margin: 0; font-weight: 600; }
+  .grp p { margin: 0; color: var(--muted); font-size: 14px; }
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .seg { display: flex; gap: 6px; }
+  .opt { flex: 1; min-height: 46px; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; font-weight: 600; padding: 4px; }
+  .opt[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  input[type="date"] { width: 100%; min-height: 46px; padding: 8px 12px; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+  .danger { min-height: 46px; border: 1px solid var(--rest); color: var(--rest); background: transparent; border-radius: 8px; font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  .photo { width: 100%; height: 100%; object-fit: contain; display: block; border-radius: 12px; }
+  .illwrap { overflow: hidden; }
+  .illwrap:has(.photo) { padding: 0; }
+</style>
+</head>
+<body>
+
+<div class="wrap" id="home"></div>
+
+<div id="player" class="overlay" hidden role="dialog" aria-modal="true" aria-label="Training">
+  <div class="pwrap">
+    <div class="ptop">
+      <button class="icon-btn" id="pClose" type="button" aria-label="Training stoppen" data-ic="x"></button>
+      <div class="pmeta" id="pMeta"></div>
+    </div>
+    <div class="segs" id="pSegs" aria-hidden="true"></div>
+    <div class="pbody">
+      <div class="illwrap" id="pIll"></div>
+      <h2 id="pName" aria-live="polite"></h2>
+      <p class="badge" id="pBadge"></p>
+      <div class="ringbox">
+        <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="rt" cx="60" cy="60" r="54"/>
+          <circle class="rp" id="pRing" cx="60" cy="60" r="54" transform="rotate(-90 60 60)"/>
+        </svg>
+        <div class="ringtxt"><span id="pTime" role="timer"></span><span id="pUnit"></span></div>
+      </div>
+      <p class="pnote" id="pNote"></p>
+    </div>
+    <div class="pctl">
+      <button class="ctl" id="pBack" type="button" aria-label="Vorige" data-ic="skip-back"></button>
+      <button class="ctl big" id="pPlay" type="button" aria-label="Start"></button>
+      <button class="ctl" id="pNext" type="button" aria-label="Volgende" data-ic="skip-forward"></button>
+    </div>
+    <p class="hint" id="pHint"></p>
+    <div class="extra"><button class="txtbtn" id="pPlus" type="button" hidden>+ 10 sec rust</button></div>
+
+    <div class="cover" id="pConfirm" hidden>
+      <h2>Training stoppen?</h2>
+      <p>Je voortgang van deze training wordt niet opgeslagen.</p>
+      <div class="row">
+        <button class="txtbtn main" id="pResume" type="button">Doorgaan</button>
+        <button class="txtbtn" id="pStop" type="button">Stoppen</button>
+      </div>
+    </div>
+    <div class="cover" id="pDone" hidden>
+      <div class="tick" data-ic="check"></div>
+      <h2>Klaar!</h2>
+      <p id="pDoneText"></p>
+      <button class="txtbtn main" id="pFinish" type="button">Terug naar overzicht</button>
+    </div>
+  </div>
+</div>
+
+<div id="settings" class="overlay" hidden role="dialog" aria-modal="true" aria-label="Instellingen">
+  <div class="sw">
+    <div class="ptop">
+      <button class="icon-btn" id="sBack" type="button" aria-label="Terug" data-ic="chevron-left"></button>
+      <h2>Instellingen</h2>
+    </div>
+    <div class="grp">
+      <h3 id="dLabel">Trainingsdagen</h3>
+      <div class="days" id="sDays" role="group" aria-labelledby="dLabel"></div>
+      <p>Standaard woensdag, vrijdag en zondag, zodat je niet traint op je schaatsdagen. Kies minimaal één dag.</p>
+    </div>
+    <div class="grp">
+      <label for="sStart"><b>Startdatum</b></label>
+      <input type="date" id="sStart">
+      <p>Week 1 begint op deze dag. Elke week duurt 7 dagen.</p>
+    </div>
+    <div class="grp">
+      <h3 id="rLabel">Rust tussen oefeningen</h3>
+      <div class="seg" id="sRest" role="group" aria-labelledby="rLabel"></div>
+    </div>
+    <div class="grp">
+      <h3 id="gLabel">Geluid</h3>
+      <div class="seg" id="sSound" role="group" aria-labelledby="gLabel"></div>
+      <p>Tonen: pieptoon bij start, aftellen van 3 naar 1, einde en afronding, plus trillen. Tonen + stem: je telefoon leest ook de oefening voor. Tik op een optie om het te horen.</p>
+    </div>
+    <div class="grp">
+      <button class="danger" id="sReset" type="button">Voortgang wissen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  var DAYN = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
+  var DAYS2 = ["zo", "ma", "di", "wo", "do", "vr", "za"];
+  var MON = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+  var MONL = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
+  var CHIPORDER = [1, 2, 3, 4, 5, 6, 0];
+  var RESTS = [5, 10, 15, 20, 30];
+  var CIRC = 339.292;
+  var KEY = "enkeltraining-app-v1";
+
+  var WEEKS = [
+    { sec: 30, where: "Ogen open, op de vloer.", leg: false, reps: "12–15", focus: "Rustig starten. Alles op de vloer met ogen open." },
+    { sec: 45, where: "Ogen open, op de vloer.", leg: true, reps: "12–15", focus: "Langer balanceren en kuitheffen op één been." },
+    { sec: 45, where: "Op een opgevouwen handdoek.", leg: true, reps: "12–15", focus: "Onstabiele ondergrond: sta op een opgevouwen handdoek." },
+    { sec: 60, where: "Op een kussen of met ogen dicht.", leg: true, reps: "15", focus: "De zwaarste week: een minuut op een kussen of met ogen dicht." }
+  ];
+
+  /* Stickfiguren in twee of drie standen (start, eind), met de ankel of kuit in het accent. */
+  function P(pts, cls) { return '<path' + (cls ? ' class="' + cls + '"' : '') + ' d="M' + pts.map(function (p) { return p[0] + " " + p[1]; }).join(" L") + '"/>'; }
+  function Cc(x, y, r, cls) { return '<circle' + (cls ? ' class="' + cls + '"' : '') + ' cx="' + x + '" cy="' + y + '" r="' + r + '"/>'; }
+  function Fr(ox, body, caption) { return '<g transform="translate(' + ox + ' 0)">' + body + '<text class="cap" x="60" y="174" text-anchor="middle">' + caption + '</text></g>'; }
+  function Ar(x, y, dir) { var d = dir || 1; return P([[x - 9 * d, y], [x + 9 * d, y]], "hl") + P([[x + 3 * d, y - 6], [x + 9 * d, y], [x + 3 * d, y + 6]], "hl"); }
+  function Wrap(label, w, inner) { return '<svg class="illus" viewBox="0 0 ' + w + ' 180" role="img" aria-label="' + label + '">' + inner + '</svg>'; }
+  function Upper(dy) {
+    return Cc(60, 28 + dy, 10) + P([[60, 40 + dy], [58, 88 + dy]]) + P([[60, 46 + dy], [72, 64 + dy], [84, 68 + dy]]);
+  }
+  var GND = P([[8, 153], [112, 153]], "gr");
+  var FOOT = P([[46, 150], [76, 150]]);
+
+  var IMG = {
+    stand: Wrap("Twee standen: staan op twee benen en staan op één been met licht gebogen knie", 260,
+      Fr(0, GND + Upper(0) + P([[58, 88], [58, 118], [58, 146]]) + FOOT, "Start") +
+      Ar(130, 80) +
+      Fr(140, GND + Upper(0) + P([[58, 88], [64, 118], [58, 146]]) + FOOT + P([[58, 88], [50, 116], [32, 130]]) + Cc(58, 146, 13, "hl"), "Op één been, knie los")),
+    calf: Wrap("Twee standen: hielen op de grond en hielen omhoog op de tenen", 260,
+      Fr(0, GND + Upper(0) + P([[58, 88], [58, 118], [58, 146]]) + P([[58, 120], [58, 146]], "hl") + FOOT, "Hielen omlaag") +
+      Ar(130, 80) +
+      Fr(140, GND + Upper(-14) + P([[58, 74], [60, 104], [62, 132]]) + P([[60, 106], [62, 132]], "hl") + P([[62, 132], [56, 141], [80, 150]]), "Hielen omhoog")),
+    calf1: Wrap("Twee standen: op één been, hiel omlaag en hiel omhoog", 260,
+      Fr(0, GND + Upper(0) + P([[58, 88], [50, 116], [32, 130]], "ghost") + P([[58, 88], [58, 118], [58, 146]]) + P([[58, 120], [58, 146]], "hl") + FOOT, "Hiel omlaag") +
+      Ar(130, 80) +
+      Fr(140, GND + Upper(-14) + P([[58, 74], [50, 102], [32, 116]], "ghost") + P([[58, 74], [60, 104], [62, 132]]) + P([[60, 106], [62, 132]], "hl") + P([[62, 132], [56, 141], [80, 150]]), "Hiel omhoog")),
+    band: (function () {
+      var leg2 = P([[22, 10], [22, 100]], "ghost") + '<path class="ghost" d="M13 100 C8 120 10 140 18 152 C24 156 32 152 33 140 C34 125 32 110 31 100 Z"/>';
+      function foot(ang) {
+        return P([[50, 10], [50, 100]]) +
+          '<g transform="translate(50 100) rotate(' + ang + ')"><path class="sole" d="M-9 0 C-14 20 -12 40 -4 52 C2 56 10 52 11 40 C12 25 9 10 9 0 Z"/><path class="hl" d="M-13 34 Q0 40 13 34"/></g>';
+      }
+      return Wrap("Drie standen van de voet bovenaf: recht, naar buiten en naar binnen met een band om de voorvoet", 360,
+        Fr(0, leg2 + foot(0), "Start") +
+        Fr(120, leg2 + foot(-28) + P([[84, 126], [102, 126]], "hl") + P([[96, 120], [102, 126], [96, 132]], "hl"), "Tenen naar buiten") +
+        Fr(240, leg2 + foot(28) + P([[96, 126], [78, 126]], "hl") + P([[84, 120], [78, 126], [84, 132]], "hl"), "Tenen naar binnen"));
+    })(),
+    circles: Wrap("Twee voorbeelden van de voet: cirkels tekenen en het alfabet in de lucht schrijven", 260,
+      Fr(0, P([[8, 36], [14, 84], [70, 86]], "gr") + P([[70, 86], [68, 104], [102, 108]]) + Cc(102, 108, 22, "hl dash") + P([[118, 96], [124, 104], [132, 98]], "hl") + Cc(102, 108, 4, "hlf"), "Cirkels, beide kanten op") +
+      Fr(130, P([[8, 36], [14, 84], [70, 86]], "gr") + P([[70, 86], [68, 104], [102, 108]]) + '<text class="hlt" x="88" y="66">A</text><text class="hlt" x="112" y="80">B</text><text class="hlt" x="106" y="140">C</text>' + Cc(102, 108, 4, "hlf"), "Alfabet in de lucht")),
+    hop: Wrap("Twee standen: staan op het linkerbeen en staan op het rechterbeen, met een stap ertussen", 260,
+      Fr(0, P([[8, 153], [112, 153]], "gr") + Cc(60, 28, 10) + P([[60, 40], [60, 88]]) + P([[60, 48], [40, 66]]) + P([[60, 48], [80, 66]]) +
+        P([[60, 88], [54, 118], [50, 146]]) + P([[40, 150], [62, 150]]) + P([[60, 88], [76, 112], [92, 126]]) + Cc(50, 146, 13, "hl"), "Op links") +
+      Ar(130, 80) +
+      Fr(140, P([[8, 153], [112, 153]], "gr") + Cc(60, 28, 10) + P([[60, 40], [60, 88]]) + P([[60, 48], [40, 66]]) + P([[60, 48], [80, 66]]) +
+        P([[60, 88], [66, 118], [70, 146]]) + P([[58, 150], [80, 150]]) + P([[60, 88], [44, 112], [28, 126]]) + Cc(70, 146, 13, "hl"), "Op rechts"))
+  };
+
+  /* Lucide-iconen (lucide.dev, ISC-licentie), inline zodat er geen extra download nodig is */
+  var LUC = {
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    "chevron-left": '<path d="m15 18-6-6 6-6"/>',
+    play: '<polygon points="6 3 20 12 6 21 6 3"/>',
+    pause: '<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>',
+    "skip-back": '<polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/>',
+    "skip-forward": '<polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/>',
+    settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>'
+  };
+  function ic(name) { return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">' + LUC[name] + '</svg>'; }
+  var ICON = { play: ic("play"), pause: ic("pause") };
+  Array.prototype.forEach.call(document.querySelectorAll("[data-ic]"), function (n) { n.innerHTML = ic(n.getAttribute("data-ic")); });
+
+  var state = { days: [3, 5, 0], start: "2026-10-19", rest: 10, sound: "beep", done: {}, sel: null, selDate: null };
+
+  function pad(n) { return n < 10 ? "0" + n : String(n); }
+  function iso(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function parseISO(s) {
+    var p = String(s).split("-");
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function today0() { var n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+  function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  function fmtLong(d) { return cap(DAYN[d.getDay()]) + " " + d.getDate() + " " + MONL[d.getMonth()]; }
+  function $(id) { return document.getElementById(id); }
+
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (saved && typeof saved === "object") {
+      if (Array.isArray(saved.days) && saved.days.length > 0 && saved.days.every(function (x) { return x >= 0 && x <= 6; })) state.days = saved.days;
+      if (typeof saved.start === "string" && /^\d{4}-\d{2}-\d{2}$/.test(saved.start) && parseISO(saved.start)) state.start = saved.start;
+      if (RESTS.indexOf(saved.rest) > -1) state.rest = saved.rest;
+      if (saved.sound === "off" || saved.sound === "beep" || saved.sound === "voice") state.sound = saved.sound;
+      else if (typeof saved.sound === "boolean") state.sound = saved.sound ? "beep" : "off";
+      if (saved.done && typeof saved.done === "object") state.done = saved.done;
+      if (typeof saved.sel === "string") { state.sel = saved.sel; state.selDate = saved.selDate; }
+    }
+  } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  /* Schema en keuze van de training van vandaag */
+  function schedule() {
+    var s = parseISO(state.start) || today0(), out = [];
+    for (var w = 0; w < 4; w++) {
+      var bs = addDays(s, 7 * w), idx = 0;
+      for (var d = 0; d < 7; d++) {
+        var dt = addDays(bs, d);
+        if (state.days.indexOf(dt.getDay()) > -1) { out.push({ id: w + "-" + idx, week: w, idx: idx, date: dt }); idx++; }
+      }
+    }
+    return out;
+  }
+  function isDone(s) { return !!state.done[s.id]; }
+  function pickCurrent(sched) {
+    var t = today0(), ti = iso(t), i;
+    if (state.sel && state.selDate === ti) {
+      for (i = 0; i < sched.length; i++) if (sched[i].id === state.sel) return sched[i];
+    }
+    var todayS = null;
+    for (i = 0; i < sched.length; i++) if (iso(sched[i].date) === ti) todayS = sched[i];
+    if (todayS && !isDone(todayS)) return todayS;
+    for (i = 0; i < sched.length; i++) if (sched[i].date > t && !isDone(sched[i])) return sched[i];
+    for (i = 0; i < sched.length; i++) if (!isDone(sched[i])) return sched[i];
+    return null;
+  }
+
+  /* Oefeningen en stappen */
+  function summary(w) {
+    var W = WEEKS[w];
+    return [
+      ["Staan op één been", "2 × " + W.sec + " sec", "per been"],
+      ["Kuitheffen", "2 × " + W.reps, W.leg ? "per been" : "op beide benen"],
+      ["Weerstandsband", "2 × 12", "per richting, per voet"],
+      ["Enkelcirkels en alfabet", "1 ×", "per voet"],
+      ["Overstappen op de mat", "2 × 10", "droog, zonder ijzer"]
+    ];
+  }
+  function buildSteps(w) {
+    var W = WEEKS[w], steps = [], sides = ["Linkerbeen", "Rechterbeen"], s;
+    function add(ex, name, img, side, set, sets, seconds, note) {
+      steps.push({ ex: ex, name: name, img: img, side: side, set: set, sets: sets, seconds: seconds, note: note });
+    }
+    for (s = 1; s <= 2; s++) sides.forEach(function (sd) {
+      add(0, "Staan op één been", "stand", sd, s, 2, W.sec, W.where + " Knie licht gebogen, zoals in je schaatshouding.");
+    });
+    for (s = 1; s <= 2; s++) {
+      var calfNote = W.reps + " herhalingen, ongeveer 3 seconden per herhaling. Langzaam omhoog en nog langzamer omlaag.";
+      if (W.leg) sides.forEach(function (sd) { add(1, "Kuitheffen", "calf1", sd, s, 2, 45, "Op één been. " + calfNote); });
+      else add(1, "Kuitheffen", "calf", null, s, 2, 45, "Op beide benen. " + calfNote);
+    }
+    for (s = 1; s <= 2; s++) sides.forEach(function (sd) {
+      add(2, "Weerstandsband", "band", sd.replace("been", "voet"), s, 2, 40, "12 keer naar buiten, daarna 12 keer naar binnen. Rustig bewegen, niet schokken.");
+    });
+    sides.forEach(function (sd) {
+      add(3, "Enkelcirkels en alfabet", "circles", sd.replace("been", "voet"), 1, 1, 40, "Cirkels in beide richtingen, daarna het alfabet in de lucht. Voet los van de grond.");
+    });
+    for (s = 1; s <= 2; s++) add(4, "Overstappen op de mat", "hop", null, s, 2, 25, "10 keer overstappen, droog en zonder ijzer. Rustig opbouwen.");
+    return steps;
+  }
+  function estMinutes(w) {
+    var st = buildSteps(w), t = 0;
+    st.forEach(function (x) { t += x.seconds; });
+    t += (st.length - 1) * state.rest;
+    return Math.round(t / 60);
+  }
+
+  /* Startscherm */
+  var GEAR = ic("settings");
+
+  function renderHome() {
+    var sched = schedule(), cur = pickCurrent(sched), t = today0(), ti = iso(t), html = "";
+    var weekNo = cur ? cur.week + 1 : 4;
+    var title = "Enkeltraining";
+    if (cur) title = iso(cur.date) === ti ? "Vandaag" : cap(DAYN[cur.date.getDay()]);
+    else title = "Alles klaar";
+    html += '<div class="top"><div><div class="eyebrow">Enkeltraining · week ' + weekNo + ' van 4</div><h1>' + title + '</h1></div>' +
+      '<button class="icon-btn" id="openSet" type="button" aria-label="Instellingen">' + GEAR + '</button></div>';
+
+    if (cur) {
+      var isToday = iso(cur.date) === ti, d = isDone(cur), rows = summary(cur.week), per = state.days.length;
+      html += '<section class="card" aria-label="Training"><div class="pills">' +
+        '<span class="pill">' + (isToday ? "Vandaag" : (cur.date > t ? "Volgende training" : "Nog te doen")) + '</span>' +
+        '<span class="pill soft">Training ' + (cur.idx + 1) + ' van ' + per + '</span>' +
+        (d ? '<span class="pill soft">Gedaan</span>' : '') + '</div>' +
+        '<h2>' + fmtLong(cur.date) + '</h2><p class="focus">' + WEEKS[cur.week].focus + '</p><ol class="lst">';
+      rows.forEach(function (r, i) {
+        html += '<li><span class="n">' + (i + 1) + '</span><span class="t">' + r[0] + '<span class="s">' + r[2] + '</span></span><span class="a">' + r[1] + '</span></li>';
+      });
+      html += '</ol><p class="meta">5 oefeningen · ± ' + estMinutes(cur.week) + ' min · ' + state.rest + ' sec rust tussen de stappen</p>' +
+        '<button class="go" id="goBtn" type="button">' + (d ? "Nog een keer" : "Start training") + '</button></section>';
+    } else {
+      html += '<section class="card"><h2>Vier weken gedaan</h2><p class="focus">Je hebt alle trainingen afgevinkt. Begin een nieuwe ronde als je wilt doorgaan.</p>' +
+        '<button class="go" id="newRound" type="button">Nieuwe ronde starten</button></section>';
+    }
+
+    html += '<section aria-labelledby="schLabel"><p class="label" id="schLabel">Schema</p>';
+    for (var w = 0; w < 4; w++) {
+      html += '<div class="wk"><h3>Week ' + (w + 1) + '</h3><div class="chips">';
+      sched.filter(function (x) { return x.week === w; }).forEach(function (x) {
+        var cls = "chip", status = "Gepland";
+        if (isDone(x)) { cls += " done"; status = "Gedaan"; }
+        else if (iso(x.date) === ti) { cls += " today"; status = "Vandaag"; }
+        else if (x.date < t) { cls += " missed"; status = "Gemist"; }
+        var sel = cur && cur.id === x.id;
+        html += '<button class="' + cls + '" type="button" data-id="' + x.id + '" aria-pressed="' + (sel ? "true" : "false") + '">' +
+          '<b>' + cap(DAYS2[x.date.getDay()]) + ' ' + x.date.getDate() + ' ' + MON[x.date.getMonth()] + '</b><small>' + status + '</small></button>';
+      });
+      html += '</div></div>';
+    }
+    html += '</section>';
+    $("home").innerHTML = html;
+
+    $("openSet").addEventListener("click", openSettings);
+    if ($("goBtn")) $("goBtn").addEventListener("click", function () { openPlayer(cur); });
+    if ($("newRound")) $("newRound").addEventListener("click", function () {
+      state.start = iso(today0()); state.done = {}; state.sel = null; save(); renderHome();
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".chip"), function (b) {
+      b.addEventListener("click", function () {
+        state.sel = b.getAttribute("data-id"); state.selDate = iso(today0()); save(); renderHome();
+      });
+    });
+  }
+
+  /* Geluid, trillen, scherm aan */
+  var AC = null, WL = null;
+  function ensureAudio() {
+    if (state.sound === "off") return;
+    try {
+      if (!AC) { var C = window.AudioContext || window.webkitAudioContext; if (C) AC = new C(); }
+      if (AC && AC.state === "suspended") AC.resume();
+    } catch (e) {}
+  }
+  function beep(f, ms, delay) {
+    if (state.sound === "off" || !AC) return;
+    try {
+      var o = AC.createOscillator(), g = AC.createGain(), t0 = AC.currentTime + (delay || 0);
+      o.type = "sine"; o.frequency.value = f; g.gain.value = 0.12;
+      o.connect(g); g.connect(AC.destination); o.start(t0); o.stop(t0 + ms / 1000);
+    } catch (e) {}
+  }
+  function buzz(p) { try { if (state.sound !== "off" && navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
+  function sound(k) {
+    if (k === "tick") beep(880, 90);
+    else if (k === "start") { beep(660, 220); buzz(60); }
+    else if (k === "end") { beep(1175, 350); buzz([80, 60, 80]); }
+    else if (k === "done") { beep(784, 160); beep(988, 160, 0.2); beep(1319, 320, 0.4); buzz([100, 60, 100, 60, 200]); }
+  }
+  function speak(text) {
+    if (state.sound !== "voice") return;
+    try {
+      if (!window.speechSynthesis) return;
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = "nl-NL"; u.rate = 1;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  function stopSpeech() { try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {} }
+  function speakStep() {
+    if (!P) return;
+    var st = P.steps[P.i], nx = P.steps[P.i + 1];
+    if (P.phase === "rest" && nx) speak("Rust. Straks " + nx.name + (nx.side ? ", " + nx.side : ""));
+    else if (P.phase === "work") speak(st.name + (st.side ? ", " + st.side : "") + (st.sets > 1 ? ", set " + st.set : ""));
+  }
+  function lock() { try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(function (l) { WL = l; }, function () {}); } catch (e) {} }
+  function unlock() { try { if (WL) { WL.release(); WL = null; } } catch (e) {} }
+
+  /* Speler */
+  var P = null, timer = null, pl = $("player");
+
+  function openPlayer(sess) {
+    P = { sess: sess, steps: buildSteps(sess.week), i: 0, phase: "ready", running: false, last: 0, elapsed: 0, lastSec: null, total: 0, left: 0 };
+    P.total = P.left = P.steps[0].seconds * 1000;
+    var segs = "";
+    for (var k = 0; k < 5; k++) segs += "<span><i></i></span>";
+    $("pSegs").innerHTML = segs;
+    $("pConfirm").hidden = true;
+    $("pDone").hidden = true;
+    pl.hidden = false;
+    document.body.style.overflow = "hidden";
+    renderStep();
+    clearInterval(timer);
+    timer = setInterval(tick, 200);
+    lock();
+    $("pPlay").focus();
+  }
+  function closePlayer() {
+    clearInterval(timer); timer = null; unlock(); stopSpeech();
+    pl.hidden = true; document.body.style.overflow = ""; P = null;
+    renderHome();
+  }
+  function setRingNoAnim() {
+    var r = $("pRing");
+    r.style.transition = "none";
+    tickUI();
+    r.getBoundingClientRect();
+    requestAnimationFrame(function () { r.style.transition = ""; });
+  }
+  var FILE = { stand: "stand", calf: "calf", calf1: "calf", band: "band", circles: "circles", hop: "hop" };
+  var ALT = { stand: "Staan op één been, knie licht gebogen", calf: "Kuitheffen: hiel omlaag en hiel omhoog", calf1: "Kuitheffen op één been", band: "Weerstandsband: voet naar buiten en naar binnen", circles: "Enkelcirkels en alfabet in de lucht", hop: "Overstappen: been kruist voor het standbeen" };
+  function showIll(key) {
+    var box = $("pIll"), im = new Image();
+    im.className = "photo"; im.alt = ALT[key];
+    im.onerror = function () { box.innerHTML = IMG[key]; };
+    im.src = "img/" + FILE[key] + ".webp";
+    box.innerHTML = ""; box.appendChild(im);
+  }
+  function renderStep() {
+    var st = P.steps[P.i], rest = P.phase === "rest", shown = rest ? P.steps[P.i + 1] : st;
+    pl.setAttribute("data-phase", P.phase);
+    showIll(shown.img);
+    var badge = (shown.side ? shown.side : "") + (shown.side && shown.sets > 1 ? " · " : "") + (shown.sets > 1 ? "set " + shown.set + " van " + shown.sets : "");
+    if (rest) {
+      $("pName").textContent = "Rust";
+      $("pBadge").textContent = "Straks: " + shown.name + (badge ? " · " + badge : "");
+      $("pNote").textContent = "Maak je klaar. De volgende oefening start vanzelf.";
+    } else {
+      $("pName").textContent = st.name;
+      $("pBadge").textContent = badge;
+      $("pNote").textContent = st.note + (P.phase === "ready" ? " Tik op start als je klaar staat." : "");
+    }
+    $("pMeta").textContent = "Oefening " + (shown.ex + 1) + " van 5";
+    $("pNext").setAttribute("aria-label", rest ? "Rust overslaan" : "Volgende");
+    $("pPlus").hidden = !rest;
+    renderControls();
+    setRingNoAnim();
+  }
+  function renderControls() {
+    var run = P.running && P.phase !== "ready";
+    $("pPlay").innerHTML = run ? ICON.pause : ICON.play;
+    $("pPlay").setAttribute("aria-label", P.phase === "ready" ? "Start" : (run ? "Pauze" : "Verder"));
+    $("pHint").textContent = P.phase === "ready" ? "Tik op de knop om te starten" : (run ? "" : "Gepauzeerd");
+  }
+  function tickUI() {
+    if (!P) return;
+    var s = Math.max(0, Math.ceil(P.left / 1000));
+    $("pTime").textContent = s >= 60 ? Math.floor(s / 60) + ":" + pad(s % 60) : String(s);
+    $("pUnit").textContent = s >= 60 ? "min" : "sec";
+    var frac = P.total ? Math.max(0, Math.min(1, P.left / P.total)) : 1;
+    $("pRing").style.strokeDashoffset = String(CIRC * (1 - frac));
+    var bars = $("pSegs").children, cur = P.steps[P.i];
+    for (var k = 0; k < bars.length; k++) {
+      var n = 0, done = 0;
+      P.steps.forEach(function (x, j) {
+        if (x.ex !== k) return;
+        n++;
+        if (j < P.i || (j === P.i && P.phase === "rest")) done++;
+      });
+      var part = (P.phase === "work" && cur.ex === k && P.total) ? 1 - P.left / P.total : 0;
+      bars[k].firstChild.style.width = Math.min(100, ((done + part) / n) * 100) + "%";
+    }
+  }
+  function advance() {
+    var st = P.steps;
+    P.lastSec = null;
+    if (P.phase === "work") {
+      if (P.i >= st.length - 1) { finish(); return; }
+      P.phase = "rest"; P.total = P.left = state.rest * 1000; sound("end");
+    } else if (P.phase === "rest") {
+      P.i++; P.phase = "work"; P.total = P.left = st[P.i].seconds * 1000; sound("start");
+    }
+    renderStep();
+    speakStep();
+  }
+  function tick() {
+    if (!P || !P.running || P.phase === "ready" || P.phase === "done") return;
+    var now = Date.now(), dt = now - P.last;
+    P.last = now; P.elapsed += dt; P.left -= dt;
+    var guard = 0;
+    while (P.left <= 0 && guard++ < 40 && P.phase !== "done") {
+      var over = -P.left;
+      advance();
+      if (P.phase === "done") return;
+      P.left -= over;
+    }
+    var sec = Math.ceil(P.left / 1000);
+    if (sec !== P.lastSec) { P.lastSec = sec; if (sec > 0 && sec <= 3) sound("tick"); }
+    tickUI();
+  }
+  function finish() {
+    P.phase = "done"; P.running = false;
+    state.done[P.sess.id] = true; state.sel = null; save();
+    var mins = Math.max(1, Math.round(P.elapsed / 60000));
+    $("pDoneText").textContent = "Training " + (P.sess.idx + 1) + " van week " + (P.sess.week + 1) + " is afgevinkt. Je was ± " + mins + " min bezig.";
+    $("pDone").hidden = false;
+    unlock(); sound("done"); speak("Klaar. Goed gedaan.");
+  }
+  function togglePlay() {
+    if (!P || P.phase === "done") return;
+    ensureAudio();
+    if (P.phase === "ready") { P.phase = "work"; P.running = true; P.last = Date.now(); sound("start"); renderStep(); speakStep(); return; }
+    P.running = !P.running;
+    if (!P.running) stopSpeech();
+    if (P.running) P.last = Date.now();
+    renderControls();
+  }
+  function skip() {
+    if (!P || P.phase === "done") return;
+    ensureAudio();
+    if (P.phase === "ready") {
+      if (P.i < P.steps.length - 1) { P.i++; P.total = P.left = P.steps[P.i].seconds * 1000; renderStep(); }
+      return;
+    }
+    P.running = true; P.last = Date.now();
+    advance();
+  }
+  function back() {
+    if (!P || P.phase === "ready" || P.phase === "done") return;
+    var st = P.steps;
+    if (P.phase === "rest") { P.phase = "work"; P.total = P.left = st[P.i].seconds * 1000; P.running = false; }
+    else {
+      var elapsed = P.total - P.left;
+      if (elapsed > 3000 || P.i === 0) { P.left = P.total; P.last = Date.now(); }
+      else { P.i--; P.total = P.left = st[P.i].seconds * 1000; P.running = false; }
+    }
+    P.lastSec = null;
+    renderStep();
+  }
+  $("pPlay").addEventListener("click", togglePlay);
+  $("pNext").addEventListener("click", skip);
+  $("pBack").addEventListener("click", back);
+  $("pPlus").addEventListener("click", function () { if (P && P.phase === "rest") { P.left += 10000; P.total += 10000; tickUI(); } });
+  $("pClose").addEventListener("click", function () {
+    if (!P || P.phase === "ready" || P.phase === "done") { closePlayer(); return; }
+    P.running = false; renderControls();
+    $("pConfirm").hidden = false;
+    $("pResume").focus();
+  });
+  $("pResume").addEventListener("click", function () { $("pConfirm").hidden = true; });
+  $("pStop").addEventListener("click", function () { $("pConfirm").hidden = true; closePlayer(); });
+  $("pFinish").addEventListener("click", function () { $("pDone").hidden = true; closePlayer(); });
+
+  /* Instellingen */
+  var armed = null;
+  function renderSettings() {
+    var days = "";
+    CHIPORDER.forEach(function (n) {
+      days += '<button class="opt" type="button" data-d="' + n + '" aria-pressed="' + (state.days.indexOf(n) > -1) + '">' + cap(DAYS2[n]) + '</button>';
+    });
+    $("sDays").innerHTML = days;
+    Array.prototype.forEach.call($("sDays").children, function (b) {
+      b.addEventListener("click", function () {
+        var n = +b.getAttribute("data-d"), at = state.days.indexOf(n);
+        if (at > -1) { if (state.days.length === 1) return; state.days.splice(at, 1); } else state.days.push(n);
+        state.sel = null; save(); renderSettings(); renderHome();
+      });
+    });
+    var r = "";
+    RESTS.forEach(function (n) { r += '<button class="opt" type="button" data-r="' + n + '" aria-pressed="' + (state.rest === n) + '">' + n + ' sec</button>'; });
+    $("sRest").innerHTML = r;
+    Array.prototype.forEach.call($("sRest").children, function (b) {
+      b.addEventListener("click", function () { state.rest = +b.getAttribute("data-r"); save(); renderSettings(); renderHome(); });
+    });
+    var so = [["off", "Uit"], ["beep", "Tonen"], ["voice", "Tonen + stem"]], sh = "";
+    so.forEach(function (o) { sh += '<button class="opt" type="button" data-s="' + o[0] + '" aria-pressed="' + (state.sound === o[0]) + '">' + o[1] + '</button>'; });
+    $("sSound").innerHTML = sh;
+    Array.prototype.forEach.call($("sSound").children, function (b) {
+      b.addEventListener("click", function () {
+        state.sound = b.getAttribute("data-s"); save(); renderSettings();
+        ensureAudio(); stopSpeech();
+        if (state.sound !== "off") { sound("start"); speak("Staan op één been, linkerbeen"); }
+      });
+    });
+    $("sStart").value = state.start;
+    $("sReset").textContent = "Voortgang wissen";
+    armed = null;
+  }
+  function openSettings() { renderSettings(); $("settings").hidden = false; document.body.style.overflow = "hidden"; $("sBack").focus(); }
+  function closeSettings() { $("settings").hidden = true; document.body.style.overflow = ""; renderHome(); }
+  $("sBack").addEventListener("click", closeSettings);
+  $("sStart").addEventListener("change", function () {
+    var v = $("sStart").value;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v) && parseISO(v)) { state.start = v; state.sel = null; save(); }
+    else $("sStart").value = state.start;
+  });
+  $("sReset").addEventListener("click", function () {
+    if (!armed) {
+      armed = setTimeout(function () { armed = null; $("sReset").textContent = "Voortgang wissen"; }, 4000);
+      $("sReset").textContent = "Zeker weten? Tik nogmaals";
+    } else {
+      clearTimeout(armed); armed = null;
+      state.done = {}; state.sel = null; save();
+      $("sReset").textContent = "Voortgang gewist";
+    }
+  });
+
+  document.addEventListener("visibilitychange", function () { if (!document.hidden && pl.hidden && $("settings").hidden) renderHome(); });
+  renderHome();
+  if ("serviceWorker" in navigator) window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+</script>
+</body>
+</html>
